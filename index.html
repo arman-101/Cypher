@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cypher - Secure Web Chat</title>
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/11743/11743755.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+        }
+        .glass-panel {
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-primary { background-color: #3b82f6; transition: background-color 0.3s ease; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-primary:disabled { background-color: #2563eb; cursor: not-allowed; }
+        .btn-secondary { background-color: #4b5563; transition: background-color 0.3s ease; }
+        .btn-secondary:hover { background-color: #374151; }
+        .btn-danger { background-color: #ef4444; transition: background-color 0.3s ease; }
+        .btn-danger:hover { background-color: #dc2626; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .message-sent { background-color: #3b82f6; align-self: flex-end; }
+        .message-received { background-color: #4b5563; align-self: flex-start; }
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            z-index: 50;
+        }
+        .unread-badge {
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+        }
+        /* Sidebar Transition */
+        #left-pane {
+            transition: margin-left 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-white flex items-center justify-center min-h-screen">
+
+    <!-- Main App Container -->
+    <div id="app" class="w-full h-full md:max-w-4xl md:h-[90vh] md:max-h-[800px] flex md:glass-panel md:rounded-2xl shadow-2xl overflow-hidden relative">
+        <!-- Content is injected via JS -->
+    </div>
+
+    <!-- Custom Modal/Alert -->
+    <div id="custom-modal" class="modal-backdrop items-center justify-center hidden">
+        <div class="glass-panel rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+            <h3 id="modal-title" class="text-xl font-bold mb-4"></h3>
+            <p id="modal-message" class="text-gray-300 mb-6"></p>
+            <div id="modal-buttons" class="flex justify-center space-x-4">
+                <button id="modal-confirm-btn" class="btn-primary px-6 py-2 rounded-lg font-semibold">Confirm</button>
+                <button id="modal-cancel-btn" class="btn-secondary px-6 py-2 rounded-lg font-semibold">Cancel</button>
+                <button id="modal-ok-btn" class="btn-primary px-6 py-2 rounded-lg font-semibold">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PeerJS Library -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const appDiv = document.getElementById('app');
+        appDiv.innerHTML = `
+            <div id="username-screen" class="w-full flex flex-col items-center justify-center p-8">
+                <img src="https://cdn-icons-png.flaticon.com/512/11743/11743755.png" class="w-20 h-20 mb-6" alt="Cypher Logo">
+                <h1 class="text-4xl font-bold mb-2">Welcome to Cypher</h1>
+                <p class="text-gray-400 mb-8">Enter a username to begin your secure session.</p>
+                <input type="text" id="username-input" class="w-full max-w-sm bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-center text-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your username...">
+                <button id="join-btn" class="mt-6 w-full max-w-sm btn-primary text-white font-bold py-3 px-4 rounded-lg text-lg">
+                    Generate Secure Identity
+                </button>
+            </div>
+            <div id="chat-container" class="w-full h-full flex-col md:flex-row hidden">
+                <button id="sidebar-toggle-open" class="absolute top-4 left-4 z-20 text-white p-2 bg-gray-800/50 rounded-md hidden md:hidden"><i class="fas fa-bars"></i></button>
+                <div id="left-pane" class="w-full md:w-1/3 h-full border-r border-gray-700 flex-col p-4 bg-gray-900 md:bg-transparent absolute md:static z-10 h-full w-full -ml-[100%] md:ml-0 flex">
+                    <div class="flex items-center mb-4">
+                         <h2 id="welcome-username" class="text-xl font-bold flex-grow"></h2>
+                         <button id="sidebar-toggle-close" class="text-gray-400 hover:text-white p-2"><i class="fas fa-times md:fa-chevron-left"></i></button>
+                    </div>
+                    <div class="glass-panel p-4 rounded-lg mb-4">
+                         <h3 class="font-bold mb-2 text-gray-300">Your Connection ID</h3>
+                         <div class="flex items-center bg-gray-900 p-2 rounded-md">
+                            <span id="my-peer-id" class="text-sm text-gray-400 truncate mr-2"></span>
+                            <button id="copy-id-btn" class="ml-auto text-gray-400 hover:text-white" title="Copy ID"><i class="fas fa-copy"></i></button>
+                         </div>
+                    </div>
+                    <h3 class="font-bold mb-2 text-gray-300">Connect with a Peer</h3>
+                    <div class="flex mb-4">
+                        <input type="text" id="peer-id-input" class="bg-gray-700 border border-gray-600 rounded-l-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Peer's ID...">
+                        <button id="connect-btn" class="btn-primary text-white font-bold py-2 px-4 rounded-r-lg text-sm">Connect</button>
+                    </div>
+                    <h3 class="font-bold mb-2 text-gray-300">Contacts</h3>
+                    <div id="contacts-list" class="flex-grow overflow-y-auto pr-2"></div>
+                    <button id="leave-btn" class="mt-4 w-full btn-danger text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center justify-center">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Leave & Forget
+                    </button>
+                </div>
+                <div id="chat-area" class="w-full md:w-2/3 h-full flex flex-col">
+                    <div id="idle-screen" class="flex-grow flex flex-col items-center justify-center text-gray-500 p-4 text-center">
+                        <i class="fas fa-comments text-6xl mb-4"></i>
+                        <h2 class="text-2xl">Select a contact to start chatting</h2>
+                        <p>Your messages are end-to-end encrypted.</p>
+                    </div>
+                    <div id="active-chat-screen" class="h-full flex-col hidden">
+                         <div class="flex items-center p-4 border-b border-gray-700">
+                            <i class="fas fa-user text-xl text-gray-400 mr-3"></i>
+                            <div class="flex-grow">
+                                <h2 id="chat-header" class="text-xl font-bold"></h2>
+                                <p id="typing-indicator" class="text-xs text-blue-400 h-4"></p>
+                            </div>
+                        </div>
+                        <div id="messages-container" class="flex-grow p-4 overflow-y-auto flex flex-col space-y-2"></div>
+                        <div class="p-4 border-t border-gray-700 flex items-center">
+                            <input type="text" id="message-input" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type an encrypted message...">
+                            <button id="send-btn" class="btn-primary text-white font-bold py-2 px-4 rounded-r-lg ml-[-1px]">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // --- DOM Elements ---
+        const getEl = id => document.getElementById(id);
+        const leftPane = getEl('left-pane');
+        const usernameScreen = getEl('username-screen'), chatContainer = getEl('chat-container'),
+              usernameInput = getEl('username-input'), joinBtn = getEl('join-btn'),
+              welcomeUsername = getEl('welcome-username'), myPeerIdSpan = getEl('my-peer-id'),
+              copyIdBtn = getEl('copy-id-btn'), peerIdInput = getEl('peer-id-input'),
+              connectBtn = getEl('connect-btn'), contactsList = getEl('contacts-list'),
+              leaveBtn = getEl('leave-btn'), idleScreen = getEl('idle-screen'), 
+              activeChatScreen = getEl('active-chat-screen'), chatHeader = getEl('chat-header'), 
+              typingIndicator = getEl('typing-indicator'), messagesContainer = getEl('messages-container'),
+              messageInput = getEl('message-input'), sendBtn = getEl('send-btn'),
+              customModal = getEl('custom-modal'), modalTitle = getEl('modal-title'),
+              modalMessage = getEl('modal-message'), modalConfirmBtn = getEl('modal-confirm-btn'),
+              modalCancelBtn = getEl('modal-cancel-btn'), modalOkBtn = getEl('modal-ok-btn'),
+              sidebarToggleOpen = getEl('sidebar-toggle-open'),
+              sidebarToggleClose = getEl('sidebar-toggle-close');
+
+        // --- App State ---
+        let peer, myUsername = '', myPeerId = '';
+        let connections = {};
+        let keyPairs = {};
+        let chatHistories = {};
+        let unreadCounts = {};
+        let currentChatPeerId = null;
+        let typingTimeout = null;
+        
+        // --- Modal & Keyboard Accessibility ---
+        const handleModalKeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const activeBtn = !modalOkBtn.classList.contains('hidden') ? modalOkBtn : modalConfirmBtn;
+                activeBtn.click();
+            }
+        };
+        const closeModal = () => {
+            customModal.classList.add('hidden');
+            document.removeEventListener('keydown', handleModalKeydown);
+        };
+        const showModal = (title, message, type = 'alert', onConfirm = () => {}) => {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalConfirmBtn.classList.toggle('hidden', type !== 'confirm');
+            modalCancelBtn.classList.toggle('hidden', type !== 'confirm');
+            modalOkBtn.classList.toggle('hidden', type !== 'alert');
+            customModal.classList.remove('hidden');
+            customModal.classList.add('flex');
+            document.removeEventListener('keydown', handleModalKeydown);
+            document.addEventListener('keydown', handleModalKeydown);
+            const focusBtn = type === 'alert' ? modalOkBtn : modalConfirmBtn;
+            focusBtn.focus();
+            modalOkBtn.onclick = closeModal;
+            modalCancelBtn.onclick = closeModal;
+            modalConfirmBtn.onclick = () => { onConfirm(); closeModal(); };
+        };
+
+        // --- Cryptography Functions ---
+        async function generateRsaKeyPair() { return await window.crypto.subtle.generateKey({name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256"}, true, ["encrypt", "decrypt"]); }
+        async function getPrivateKey() { const privateKeyJWK = JSON.parse(localStorage.getItem('myPrivateKey')); return await window.crypto.subtle.importKey("jwk", privateKeyJWK, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["decrypt"]); }
+        async function importPublicKey(jwk) { return await window.crypto.subtle.importKey("jwk", JSON.parse(jwk), { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]); }
+        async function encryptData(publicKey, data) { const encoded = new TextEncoder().encode(JSON.stringify(data)); const encrypted = await window.crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, encoded); return window.btoa(String.fromCharCode(...new Uint8Array(encrypted))); }
+        async function decryptData(privateKey, encryptedMessage) { const encryptedData = new Uint8Array(window.atob(encryptedMessage).split("").map(c => c.charCodeAt(0))); const decrypted = await window.crypto.subtle.decrypt({ name: "RSA-OAEP" }, privateKey, encryptedData); return JSON.parse(new TextDecoder().decode(decrypted)); }
+
+        // --- Main App Logic ---
+        async function initializeUser(username) {
+            try {
+                joinBtn.disabled = true;
+                joinBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+                myUsername = username;
+                welcomeUsername.textContent = myUsername;
+                const masterKeyPair = await generateRsaKeyPair();
+                localStorage.setItem('myPrivateKey', JSON.stringify(await window.crypto.subtle.exportKey("jwk", masterKeyPair.privateKey)));
+                localStorage.setItem('myPublicKey', JSON.stringify(await window.crypto.subtle.exportKey("jwk", masterKeyPair.publicKey)));
+                if (Notification.permission !== "granted") await Notification.requestPermission();
+                peer = new Peer();
+                setupPeerListeners();
+            } catch (error) {
+                showModal('Initialization Failed', `An error occurred: ${error.message}. Please try refreshing the page.`, 'alert');
+                joinBtn.disabled = false;
+                joinBtn.innerHTML = 'Generate Secure Identity';
+            }
+        }
+
+        function setupPeerListeners() {
+            peer.on('open', id => {
+                myPeerId = id;
+                myPeerIdSpan.textContent = myPeerId;
+                usernameScreen.classList.add('hidden');
+                chatContainer.classList.remove('hidden');
+                chatContainer.classList.add('flex');
+            });
+            peer.on('connection', conn => handleNewConnection(conn));
+            peer.on('error', err => {
+                showModal('Connection Error', err.message, 'alert');
+                if (getEl('username-screen').offsetParent !== null) {
+                    joinBtn.disabled = false;
+                    joinBtn.innerHTML = 'Generate Secure Identity';
+                }
+            });
+        }
+
+        function handleNewConnection(conn) {
+            conn.on('open', async () => {
+                connections[conn.peer] = conn;
+                const myPublicKeyJWK = localStorage.getItem('myPublicKey');
+                conn.send({ type: 'handshake', username: myUsername, publicKey: myPublicKeyJWK });
+            });
+            conn.on('data', data => handleReceivedData(conn.peer, data));
+            conn.on('close', () => removeContact(conn.peer));
+        }
+        
+        async function handleReceivedData(peerId, data) {
+            try {
+                if (data.type === 'handshake') {
+                    if (!keyPairs[peerId]) {
+                        keyPairs[peerId] = { publicKey: await importPublicKey(data.publicKey), username: data.username };
+                        chatHistories[peerId] = [];
+                        unreadCounts[peerId] = 0;
+                        addContactToList(peerId, data.username);
+                        showModal('Contact Added', `${data.username} has been added to your contacts.`, 'alert');
+                    }
+                } else if (data.type === 'chat') {
+                    const privateKey = await getPrivateKey();
+                    const decryptedPayload = await decryptData(privateKey, data.payload);
+                    const messageData = { sender: keyPairs[peerId].username, payload: decryptedPayload, isSent: false };
+                    chatHistories[peerId].push(messageData);
+                    
+                    if(peerId === currentChatPeerId) {
+                        addMessageToUI(messageData.sender, messageData.payload, messageData.isSent);
+                    } else {
+                        updateUnreadCount(peerId, 1);
+                    }
+                    if (document.hidden) {
+                        new Notification(`New Message from ${keyPairs[peerId].username}`, {
+                            body: decryptedPayload.content,
+                            icon: 'https://cdn-icons-png.flaticon.com/512/11743/11743755.png'
+                        });
+                    }
+                } else if (data.type === 'typing') {
+                    showTypingIndicator(peerId);
+                }
+            } catch (error) { console.error("Failed to handle received data:", error); }
+        }
+        
+        function connectToPeer(peerId) {
+            if (!peerId || peerId === myPeerId) { showModal("Invalid ID", "Please enter a valid Peer ID to connect.", "alert"); return; }
+            if(connections[peerId]) { showModal("Already Connected", "You are already connected to this peer.", "alert"); return; }
+            const conn = peer.connect(peerId);
+            handleNewConnection(conn);
+        }
+        
+        async function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (!messageText || !currentChatPeerId) return;
+            const payload = { type: 'text', content: messageText, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+            
+            if (!keyPairs[currentChatPeerId]?.publicKey) {
+                showModal("Cannot Send", "Secure connection not fully established. Please wait.", "alert");
+                return;
+            }
+            try {
+                const encryptedPayload = await encryptData(keyPairs[currentChatPeerId].publicKey, payload);
+                connections[currentChatPeerId].send({ type: 'chat', payload: encryptedPayload });
+                const messageData = { sender: 'You', payload, isSent: true };
+                chatHistories[currentChatPeerId].push(messageData);
+                addMessageToUI(messageData.sender, messageData.payload, messageData.isSent);
+                messageInput.value = '';
+            } catch(error) {
+                showModal("Encryption Error", "Could not send message. The connection may have been lost.", "alert");
+                console.error("Encryption failed:", error);
+            }
+        }
+
+        // --- UI Functions ---
+        function toggleSidebar(show) {
+            if(show) {
+                leftPane.classList.remove('-ml-[100%]');
+                sidebarToggleOpen.classList.add('hidden');
+            } else {
+                leftPane.classList.add('-ml-[100%]');
+                sidebarToggleOpen.classList.remove('hidden');
+            }
+        }
+
+        function addContactToList(peerId, username) {
+            if (getEl(`contact-${peerId}`)) return;
+            const contactDiv = document.createElement('div');
+            contactDiv.id = `contact-${peerId}`;
+            contactDiv.className = "flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors group";
+            contactDiv.innerHTML = `<i class="fas fa-user-circle text-2xl text-gray-400 mr-3"></i><span class="font-medium flex-grow">${username}</span><div id="unread-${peerId}" class="unread-badge mr-2 hidden">0</div><button class="delete-contact-btn text-gray-500 hover:text-red-500 text-sm opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-trash-alt"></i></button>`;
+            contactDiv.onclick = (e) => { 
+                if (!e.target.closest('.delete-contact-btn')) { 
+                    selectChat(peerId, username); 
+                    if (window.innerWidth < 768) { // If on mobile, close sidebar on selection
+                        toggleSidebar(false);
+                    }
+                } 
+            };
+            contactDiv.querySelector('.delete-contact-btn').onclick = () => {
+                showModal('Delete Contact', `Are you sure you want to delete ${username}?`, 'confirm', () => {
+                    connections[peerId]?.close();
+                    removeContact(peerId);
+                });
+            };
+            contactsList.appendChild(contactDiv);
+        }
+
+        function removeContact(peerId) {
+            delete connections[peerId]; delete keyPairs[peerId];
+            delete chatHistories[peerId]; delete unreadCounts[peerId];
+            getEl(`contact-${peerId}`)?.remove();
+            if (currentChatPeerId === peerId) switchToIdleScreen();
+        }
+        
+        function selectChat(peerId, username) {
+            currentChatPeerId = peerId;
+            chatHeader.textContent = username;
+            Array.from(contactsList.children).forEach(child => child.classList.remove('bg-blue-600', 'hover:bg-blue-700'));
+            getEl(`contact-${peerId}`).classList.add('bg-blue-600', 'hover:bg-blue-700');
+            updateUnreadCount(peerId, 0);
+            messagesContainer.innerHTML = '';
+            const history = chatHistories[peerId] || [];
+            history.forEach(msg => addMessageToUI(msg.sender, msg.payload, msg.isSent));
+            idleScreen.classList.add('hidden');
+            activeChatScreen.classList.remove('hidden');
+            activeChatScreen.classList.add('flex');
+            messageInput.focus();
+        }
+
+        function switchToIdleScreen() {
+            currentChatPeerId = null;
+            idleScreen.classList.remove('hidden');
+            activeChatScreen.classList.add('hidden');
+            activeChatScreen.classList.remove('flex');
+            Array.from(contactsList.children).forEach(child => child.classList.remove('bg-blue-600', 'hover:bg-blue-700'));
+        }
+        
+        function updateUnreadCount(peerId, change) {
+            unreadCounts[peerId] = change === 0 ? 0 : (unreadCounts[peerId] || 0) + change;
+            const badge = getEl(`unread-${peerId}`);
+            if (badge) {
+                badge.textContent = unreadCounts[peerId];
+                badge.classList.toggle('hidden', unreadCounts[peerId] === 0);
+            }
+        }
+
+        function addMessageToUI(sender, payload, isSent) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = `w-full flex flex-col ${isSent ? 'items-end' : 'items-start'}`;
+            let contentHTML = `<p class="break-words">${payload.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `max-w-xs md:max-w-md p-3 rounded-lg ${isSent ? 'message-sent' : 'message-received'}`;
+            messageBubble.innerHTML = `<p class="text-sm font-bold mb-1">${sender}</p>${contentHTML}`;
+            const timestampSpan = document.createElement('span');
+            timestampSpan.className = 'text-xs text-gray-400 mt-1 px-1';
+            timestampSpan.textContent = payload.timestamp;
+            messageWrapper.appendChild(messageBubble);
+            messageWrapper.appendChild(timestampSpan);
+            messagesContainer.appendChild(messageWrapper);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showTypingIndicator(peerId) {
+            if (currentChatPeerId === peerId) {
+                typingIndicator.textContent = "typing...";
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => { typingIndicator.textContent = ""; }, 2000);
+            }
+        }
+        
+        // --- Event Listeners ---
+        joinBtn.addEventListener('click', () => { const username = usernameInput.value.trim(); if (username) initializeUser(username); else showModal('Username Required', 'Please enter a username.', 'alert'); });
+        usernameInput.addEventListener('keypress', e => { if(e.key === 'Enter') joinBtn.click(); });
+        copyIdBtn.addEventListener('click', () => { navigator.clipboard.writeText(myPeerId).then(() => {
+            const originalText = copyIdBtn.innerHTML;
+            copyIdBtn.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+            setTimeout(() => { copyIdBtn.innerHTML = originalText; }, 1500);
+        }); });
+        connectBtn.addEventListener('click', () => { const peerId = peerIdInput.value.trim(); connectToPeer(peerId); peerIdInput.value = ''; });
+        peerIdInput.addEventListener('keypress', e => { if (e.key === 'Enter') connectBtn.click(); });
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+        messageInput.addEventListener('keyup', () => { if (currentChatPeerId && connections[currentChatPeerId]) connections[currentChatPeerId].send({ type: 'typing' }); });
+        leaveBtn.addEventListener('click', () => {
+            showModal('Leave & Forget', 'This will delete your keys and end your session.', 'confirm', () => {
+                peer?.destroy();
+                localStorage.clear();
+                window.removeEventListener('beforeunload', beforeUnloadHandler);
+                location.reload();
+            });
+        });
+
+        // Sidebar Toggles
+        sidebarToggleOpen.addEventListener('click', () => toggleSidebar(true));
+        sidebarToggleClose.addEventListener('click', () => toggleSidebar(false));
+
+        const beforeUnloadHandler = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', beforeUnloadHandler);
+    });
+    </script>
+</body>
+</html>
