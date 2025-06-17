@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cypher - Secure Web Chat</title>
-    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/11743/11743755.png">
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/11743/11743755.png ">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -51,16 +51,12 @@
             justify-content: center;
             margin-left: auto;
         }
-        /* Sidebar Transition */
-        #left-pane {
-            transition: margin-left 0.3s ease-in-out;
-        }
     </style>
 </head>
 <body class="text-white flex items-center justify-center min-h-screen">
 
     <!-- Main App Container -->
-    <div id="app" class="w-full h-full md:max-w-4xl md:h-[90vh] md:max-h-[800px] flex md:glass-panel md:rounded-2xl shadow-2xl overflow-hidden relative">
+    <div id="app" class="w-full max-w-4xl h-[90vh] max-h-[800px] flex glass-panel rounded-2xl shadow-2xl overflow-hidden">
         <!-- Content is injected via JS -->
     </div>
 
@@ -85,7 +81,7 @@
         const appDiv = document.getElementById('app');
         appDiv.innerHTML = `
             <div id="username-screen" class="w-full flex flex-col items-center justify-center p-8">
-                <img src="https://cdn-icons-png.flaticon.com/512/11743/11743755.png" class="w-20 h-20 mb-6" alt="Cypher Logo">
+                <i class="fas fa-shield-halved text-7xl text-blue-400 mb-6"></i>
                 <h1 class="text-4xl font-bold mb-2">Welcome to Cypher</h1>
                 <p class="text-gray-400 mb-8">Enter a username to begin your secure session.</p>
                 <input type="text" id="username-input" class="w-full max-w-sm bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-center text-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your username...">
@@ -93,18 +89,17 @@
                     Generate Secure Identity
                 </button>
             </div>
-            <div id="chat-container" class="w-full h-full flex-col md:flex-row hidden">
-                <button id="sidebar-toggle-open" class="absolute top-4 left-4 z-20 text-white p-2 bg-gray-800/50 rounded-md hidden md:hidden"><i class="fas fa-bars"></i></button>
-                <div id="left-pane" class="w-full md:w-1/3 h-full border-r border-gray-700 flex-col p-4 bg-gray-900 md:bg-transparent absolute md:static z-10 h-full w-full -ml-[100%] md:ml-0 flex">
+            <div id="chat-container" class="w-full h-full flex hidden">
+                <div class="w-1/3 h-full border-r border-gray-700 flex flex-col p-4">
                     <div class="flex items-center mb-4">
-                         <h2 id="welcome-username" class="text-xl font-bold flex-grow"></h2>
-                         <button id="sidebar-toggle-close" class="text-gray-400 hover:text-white p-2"><i class="fas fa-times md:fa-chevron-left"></i></button>
+                         <i class="fas fa-user-shield text-2xl text-blue-400 mr-3"></i>
+                         <h2 id="welcome-username" class="text-xl font-bold"></h2>
                     </div>
                     <div class="glass-panel p-4 rounded-lg mb-4">
                          <h3 class="font-bold mb-2 text-gray-300">Your Connection ID</h3>
                          <div class="flex items-center bg-gray-900 p-2 rounded-md">
                             <span id="my-peer-id" class="text-sm text-gray-400 truncate mr-2"></span>
-                            <button id="copy-id-btn" class="ml-auto text-gray-400 hover:text-white" title="Copy ID"><i class="fas fa-copy"></i></button>
+                            <button id="copy-id-btn" class="ml-auto text-gray-400 hover:text-white"><i class="fas fa-copy"></i></button>
                          </div>
                     </div>
                     <h3 class="font-bold mb-2 text-gray-300">Connect with a Peer</h3>
@@ -118,7 +113,7 @@
                         <i class="fas fa-sign-out-alt mr-2"></i> Leave & Forget
                     </button>
                 </div>
-                <div id="chat-area" class="w-full md:w-2/3 h-full flex flex-col">
+                <div id="chat-area" class="w-2/3 h-full flex flex-col">
                     <div id="idle-screen" class="flex-grow flex flex-col items-center justify-center text-gray-500 p-4 text-center">
                         <i class="fas fa-comments text-6xl mb-4"></i>
                         <h2 class="text-2xl">Select a contact to start chatting</h2>
@@ -144,7 +139,6 @@
 
         // --- DOM Elements ---
         const getEl = id => document.getElementById(id);
-        const leftPane = getEl('left-pane');
         const usernameScreen = getEl('username-screen'), chatContainer = getEl('chat-container'),
               usernameInput = getEl('username-input'), joinBtn = getEl('join-btn'),
               welcomeUsername = getEl('welcome-username'), myPeerIdSpan = getEl('my-peer-id'),
@@ -156,15 +150,13 @@
               messageInput = getEl('message-input'), sendBtn = getEl('send-btn'),
               customModal = getEl('custom-modal'), modalTitle = getEl('modal-title'),
               modalMessage = getEl('modal-message'), modalConfirmBtn = getEl('modal-confirm-btn'),
-              modalCancelBtn = getEl('modal-cancel-btn'), modalOkBtn = getEl('modal-ok-btn'),
-              sidebarToggleOpen = getEl('sidebar-toggle-open'),
-              sidebarToggleClose = getEl('sidebar-toggle-close');
+              modalCancelBtn = getEl('modal-cancel-btn'), modalOkBtn = getEl('modal-ok-btn');
 
         // --- App State ---
         let peer, myUsername = '', myPeerId = '';
         let connections = {};
         let keyPairs = {};
-        let chatHistories = {};
+        let chatHistories = {}; // FIX: To store message history
         let unreadCounts = {};
         let currentChatPeerId = null;
         let typingTimeout = null;
@@ -215,7 +207,9 @@
                 const masterKeyPair = await generateRsaKeyPair();
                 localStorage.setItem('myPrivateKey', JSON.stringify(await window.crypto.subtle.exportKey("jwk", masterKeyPair.privateKey)));
                 localStorage.setItem('myPublicKey', JSON.stringify(await window.crypto.subtle.exportKey("jwk", masterKeyPair.publicKey)));
-                if (Notification.permission !== "granted") await Notification.requestPermission();
+                if (Notification.permission !== "granted") {
+                    await Notification.requestPermission();
+                }
                 peer = new Peer();
                 setupPeerListeners();
             } catch (error) {
@@ -231,7 +225,6 @@
                 myPeerIdSpan.textContent = myPeerId;
                 usernameScreen.classList.add('hidden');
                 chatContainer.classList.remove('hidden');
-                chatContainer.classList.add('flex');
             });
             peer.on('connection', conn => handleNewConnection(conn));
             peer.on('error', err => {
@@ -258,7 +251,7 @@
                 if (data.type === 'handshake') {
                     if (!keyPairs[peerId]) {
                         keyPairs[peerId] = { publicKey: await importPublicKey(data.publicKey), username: data.username };
-                        chatHistories[peerId] = [];
+                        chatHistories[peerId] = []; // Initialize history
                         unreadCounts[peerId] = 0;
                         addContactToList(peerId, data.username);
                         showModal('Contact Added', `${data.username} has been added to your contacts.`, 'alert');
@@ -277,13 +270,16 @@
                     if (document.hidden) {
                         new Notification(`New Message from ${keyPairs[peerId].username}`, {
                             body: decryptedPayload.content,
-                            icon: 'https://cdn-icons-png.flaticon.com/512/11743/11743755.png'
+                            icon: 'https://img.icons8.com/plasticine/100/000000/secured-letter.png'
                         });
                     }
                 } else if (data.type === 'typing') {
                     showTypingIndicator(peerId);
                 }
-            } catch (error) { console.error("Failed to handle received data:", error); }
+            } catch (error) {
+                console.error("Failed to handle received data:", error);
+                showModal("Decryption Error", "Failed to process an incoming message.");
+            }
         }
         
         function connectToPeer(peerId) {
@@ -296,15 +292,17 @@
         async function sendMessage() {
             const messageText = messageInput.value.trim();
             if (!messageText || !currentChatPeerId) return;
+
             const payload = { type: 'text', content: messageText, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
             
-            if (!keyPairs[currentChatPeerId]?.publicKey) {
-                showModal("Cannot Send", "Secure connection not fully established. Please wait.", "alert");
+            if (!keyPairs[currentChatPeerId] || !keyPairs[currentChatPeerId].publicKey) {
+                showModal("Cannot Send", "Secure connection not fully established. Please wait a moment.", "alert");
                 return;
             }
             try {
                 const encryptedPayload = await encryptData(keyPairs[currentChatPeerId].publicKey, payload);
                 connections[currentChatPeerId].send({ type: 'chat', payload: encryptedPayload });
+                
                 const messageData = { sender: 'You', payload, isSent: true };
                 chatHistories[currentChatPeerId].push(messageData);
                 addMessageToUI(messageData.sender, messageData.payload, messageData.isSent);
@@ -316,32 +314,15 @@
         }
 
         // --- UI Functions ---
-        function toggleSidebar(show) {
-            if(show) {
-                leftPane.classList.remove('-ml-[100%]');
-                sidebarToggleOpen.classList.add('hidden');
-            } else {
-                leftPane.classList.add('-ml-[100%]');
-                sidebarToggleOpen.classList.remove('hidden');
-            }
-        }
-
         function addContactToList(peerId, username) {
             if (getEl(`contact-${peerId}`)) return;
             const contactDiv = document.createElement('div');
             contactDiv.id = `contact-${peerId}`;
             contactDiv.className = "flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors group";
             contactDiv.innerHTML = `<i class="fas fa-user-circle text-2xl text-gray-400 mr-3"></i><span class="font-medium flex-grow">${username}</span><div id="unread-${peerId}" class="unread-badge mr-2 hidden">0</div><button class="delete-contact-btn text-gray-500 hover:text-red-500 text-sm opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-trash-alt"></i></button>`;
-            contactDiv.onclick = (e) => { 
-                if (!e.target.closest('.delete-contact-btn')) { 
-                    selectChat(peerId, username); 
-                    if (window.innerWidth < 768) { // If on mobile, close sidebar on selection
-                        toggleSidebar(false);
-                    }
-                } 
-            };
+            contactDiv.onclick = (e) => { if (!e.target.closest('.delete-contact-btn')) { selectChat(peerId, username); } };
             contactDiv.querySelector('.delete-contact-btn').onclick = () => {
-                showModal('Delete Contact', `Are you sure you want to delete ${username}?`, 'confirm', () => {
+                showModal('Delete Contact', `Are you sure you want to delete ${username}? This cannot be undone.`, 'confirm', () => {
                     connections[peerId]?.close();
                     removeContact(peerId);
                 });
@@ -350,8 +331,10 @@
         }
 
         function removeContact(peerId) {
-            delete connections[peerId]; delete keyPairs[peerId];
-            delete chatHistories[peerId]; delete unreadCounts[peerId];
+            delete connections[peerId];
+            delete keyPairs[peerId];
+            delete chatHistories[peerId];
+            delete unreadCounts[peerId];
             getEl(`contact-${peerId}`)?.remove();
             if (currentChatPeerId === peerId) switchToIdleScreen();
         }
@@ -362,9 +345,12 @@
             Array.from(contactsList.children).forEach(child => child.classList.remove('bg-blue-600', 'hover:bg-blue-700'));
             getEl(`contact-${peerId}`).classList.add('bg-blue-600', 'hover:bg-blue-700');
             updateUnreadCount(peerId, 0);
-            messagesContainer.innerHTML = '';
+
+            messagesContainer.innerHTML = ''; // Clear display
+            // FIX: Repopulate with stored history
             const history = chatHistories[peerId] || [];
             history.forEach(msg => addMessageToUI(msg.sender, msg.payload, msg.isSent));
+            
             idleScreen.classList.add('hidden');
             activeChatScreen.classList.remove('hidden');
             activeChatScreen.classList.add('flex');
@@ -380,7 +366,11 @@
         }
         
         function updateUnreadCount(peerId, change) {
-            unreadCounts[peerId] = change === 0 ? 0 : (unreadCounts[peerId] || 0) + change;
+            if (change === 0) {
+                unreadCounts[peerId] = 0;
+            } else {
+                unreadCounts[peerId] = (unreadCounts[peerId] || 0) + change;
+            }
             const badge = getEl(`unread-${peerId}`);
             if (badge) {
                 badge.textContent = unreadCounts[peerId];
@@ -413,34 +403,25 @@
         }
         
         // --- Event Listeners ---
-        joinBtn.addEventListener('click', () => { const username = usernameInput.value.trim(); if (username) initializeUser(username); else showModal('Username Required', 'Please enter a username.', 'alert'); });
+        joinBtn.addEventListener('click', () => { const username = usernameInput.value.trim(); if (username) initializeUser(username); else showModal('Username Required', 'Please enter a username to continue.', 'alert'); });
         usernameInput.addEventListener('keypress', e => { if(e.key === 'Enter') joinBtn.click(); });
-        copyIdBtn.addEventListener('click', () => { navigator.clipboard.writeText(myPeerId).then(() => {
-            const originalText = copyIdBtn.innerHTML;
-            copyIdBtn.innerHTML = '<i class="fas fa-check text-green-500"></i>';
-            setTimeout(() => { copyIdBtn.innerHTML = originalText; }, 1500);
-        }); });
+        copyIdBtn.addEventListener('click', () => { navigator.clipboard.writeText(myPeerId).then(() => showModal('Copied!', 'Your Connection ID has been copied to the clipboard.', 'alert')); });
         connectBtn.addEventListener('click', () => { const peerId = peerIdInput.value.trim(); connectToPeer(peerId); peerIdInput.value = ''; });
-        peerIdInput.addEventListener('keypress', e => { if (e.key === 'Enter') connectBtn.click(); });
         sendBtn.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
         messageInput.addEventListener('keyup', () => { if (currentChatPeerId && connections[currentChatPeerId]) connections[currentChatPeerId].send({ type: 'typing' }); });
         leaveBtn.addEventListener('click', () => {
-            showModal('Leave & Forget', 'This will delete your keys and end your session.', 'confirm', () => {
-                peer?.destroy();
+            showModal('Leave & Forget', 'Are you sure? This will delete your keys, clear all conversations, and disconnect you. This action cannot be undone.', 'confirm', () => {
+                peer.destroy();
                 localStorage.clear();
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
                 location.reload();
             });
         });
 
-        // Sidebar Toggles
-        sidebarToggleOpen.addEventListener('click', () => toggleSidebar(true));
-        sidebarToggleClose.addEventListener('click', () => toggleSidebar(false));
-
         const beforeUnloadHandler = (e) => {
             e.preventDefault();
-            e.returnValue = '';
+            e.returnValue = ''; // Required for Chrome and other browsers
         };
         window.addEventListener('beforeunload', beforeUnloadHandler);
     });
