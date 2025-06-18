@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cypher - Secure Web Chat</title>
-    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/11743/11743755.png ">
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/11743/11743755.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,9 +13,14 @@
             font-family: 'Inter', sans-serif;
             background-color: #111827;
         }
-        .glass-panel {
-            background: rgba(31, 41, 55, 0.7);
-            backdrop-filter: blur(12px);
+        .app-container {
+            background: rgba(42, 53, 71, 0.6);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-panel-inner {
+            background: rgba(51, 65, 85, 0.6);
+            backdrop-filter: blur(14px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .btn-primary { background-color: #3b82f6; transition: background-color 0.3s ease; }
@@ -51,18 +56,21 @@
             justify-content: center;
             margin-left: auto;
         }
+        #left-pane {
+            transition: transform 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body class="text-white flex items-center justify-center min-h-screen">
 
     <!-- Main App Container -->
-    <div id="app" class="w-full max-w-4xl h-[90vh] max-h-[800px] flex glass-panel rounded-2xl shadow-2xl overflow-hidden">
+    <div id="app" class="w-full h-screen md:h-[90vh] md:max-w-6xl md:max-h-[800px] flex app-container md:rounded-2xl shadow-2xl overflow-hidden relative">
         <!-- Content is injected via JS -->
     </div>
 
     <!-- Custom Modal/Alert -->
     <div id="custom-modal" class="modal-backdrop items-center justify-center hidden">
-        <div class="glass-panel rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+        <div class="glass-panel-inner rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
             <h3 id="modal-title" class="text-xl font-bold mb-4"></h3>
             <p id="modal-message" class="text-gray-300 mb-6"></p>
             <div id="modal-buttons" class="flex justify-center space-x-4">
@@ -81,7 +89,7 @@
         const appDiv = document.getElementById('app');
         appDiv.innerHTML = `
             <div id="username-screen" class="w-full flex flex-col items-center justify-center p-8">
-                <i class="fas fa-shield-halved text-7xl text-blue-400 mb-6"></i>
+                <img src="https://cdn-icons-png.flaticon.com/512/11743/11743755.png" class="w-20 h-20 mb-6" alt="Cypher Logo">
                 <h1 class="text-4xl font-bold mb-2">Welcome to Cypher</h1>
                 <p class="text-gray-400 mb-8">Enter a username to begin your secure session.</p>
                 <input type="text" id="username-input" class="w-full max-w-sm bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-center text-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your username...">
@@ -89,39 +97,43 @@
                     Generate Secure Identity
                 </button>
             </div>
-            <div id="chat-container" class="w-full h-full flex hidden">
-                <div class="w-1/3 h-full border-r border-gray-700 flex flex-col p-4">
-                    <div class="flex items-center mb-4">
-                         <i class="fas fa-user-shield text-2xl text-blue-400 mr-3"></i>
-                         <h2 id="welcome-username" class="text-xl font-bold"></h2>
+            <div id="chat-container" class="w-full h-full flex-col md:flex-row hidden">
+                <div id="left-pane" class="w-full md:w-1/3 lg:w-1/4 h-full border-r border-gray-700/50 flex flex-col p-4 bg-gray-900/95 md:bg-transparent absolute md:static z-20 h-full w-4/5 max-w-sm -translate-x-full md:translate-x-0">
+                    <div class="flex items-center mb-4 flex-shrink-0">
+                         <h2 id="welcome-username" class="text-xl font-bold flex-grow"></h2>
+                         <button id="sidebar-toggle-close" class="text-gray-400 hover:text-white p-2 md:hidden"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="glass-panel p-4 rounded-lg mb-4">
-                         <h3 class="font-bold mb-2 text-gray-300">Your Connection ID</h3>
-                         <div class="flex items-center bg-gray-900 p-2 rounded-md">
-                            <span id="my-peer-id" class="text-sm text-gray-400 truncate mr-2"></span>
-                            <button id="copy-id-btn" class="ml-auto text-gray-400 hover:text-white"><i class="fas fa-copy"></i></button>
-                         </div>
+                    <div class="flex-grow flex flex-col min-h-0 overflow-y-auto">
+                        <div class="glass-panel-inner p-4 rounded-lg mb-4 flex-shrink-0">
+                             <h3 class="font-bold mb-2 text-gray-300">Your Connection ID</h3>
+                             <div class="flex items-center bg-gray-900 p-2 rounded-md">
+                                <span id="my-peer-id" class="text-sm text-gray-400 truncate mr-2"></span>
+                                <button id="copy-id-btn" class="ml-auto text-gray-400 hover:text-white" title="Copy ID"><i class="fas fa-copy"></i></button>
+                             </div>
+                        </div>
+                        <h3 class="font-bold mb-2 text-gray-300 flex-shrink-0">Connect with a Peer</h3>
+                        <div class="flex mb-4 flex-shrink-0">
+                            <input type="text" id="peer-id-input" class="bg-gray-700 border border-gray-600 rounded-l-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Peer's ID...">
+                            <button id="connect-btn" class="btn-primary text-white font-bold py-2 px-4 rounded-r-lg text-sm">Connect</button>
+                        </div>
+                        <h3 class="font-bold mb-2 text-gray-300 flex-shrink-0">Contacts</h3>
+                        <div id="contacts-list" class="flex-grow pr-2"></div>
                     </div>
-                    <h3 class="font-bold mb-2 text-gray-300">Connect with a Peer</h3>
-                    <div class="flex mb-4">
-                        <input type="text" id="peer-id-input" class="bg-gray-700 border border-gray-600 rounded-l-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Peer's ID...">
-                        <button id="connect-btn" class="btn-primary text-white font-bold py-2 px-4 rounded-r-lg text-sm">Connect</button>
-                    </div>
-                    <h3 class="font-bold mb-2 text-gray-300">Contacts</h3>
-                    <div id="contacts-list" class="flex-grow overflow-y-auto pr-2"></div>
-                    <button id="leave-btn" class="mt-4 w-full btn-danger text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center justify-center">
+                    <button id="leave-btn" class="mt-4 w-full btn-danger text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center justify-center flex-shrink-0">
                         <i class="fas fa-sign-out-alt mr-2"></i> Leave & Forget
                     </button>
                 </div>
-                <div id="chat-area" class="w-2/3 h-full flex flex-col">
-                    <div id="idle-screen" class="flex-grow flex flex-col items-center justify-center text-gray-500 p-4 text-center">
+                <div id="chat-area" class="w-full h-full flex flex-col">
+                    <div id="idle-screen" class="flex-grow flex flex-col items-center justify-center text-gray-500 p-4 text-center relative">
+                         <button id="sidebar-toggle-open" class="absolute top-4 left-4 text-white p-2 rounded-md md:hidden"><i class="fas fa-bars"></i></button>
                         <i class="fas fa-comments text-6xl mb-4"></i>
                         <h2 class="text-2xl">Select a contact to start chatting</h2>
                         <p>Your messages are end-to-end encrypted.</p>
                     </div>
                     <div id="active-chat-screen" class="h-full flex-col hidden">
                          <div class="flex items-center p-4 border-b border-gray-700">
-                            <i class="fas fa-user text-xl text-gray-400 mr-3"></i>
+                            <button id="sidebar-toggle-open-chat" class="text-white p-2 rounded-md mr-2 md:hidden"><i class="fas fa-bars"></i></button>
+                            <i class="fas fa-user text-xl text-gray-400 mr-3 hidden md:block"></i>
                             <div class="flex-grow">
                                 <h2 id="chat-header" class="text-xl font-bold"></h2>
                                 <p id="typing-indicator" class="text-xs text-blue-400 h-4"></p>
@@ -139,6 +151,7 @@
 
         // --- DOM Elements ---
         const getEl = id => document.getElementById(id);
+        const leftPane = getEl('left-pane');
         const usernameScreen = getEl('username-screen'), chatContainer = getEl('chat-container'),
               usernameInput = getEl('username-input'), joinBtn = getEl('join-btn'),
               welcomeUsername = getEl('welcome-username'), myPeerIdSpan = getEl('my-peer-id'),
@@ -150,13 +163,16 @@
               messageInput = getEl('message-input'), sendBtn = getEl('send-btn'),
               customModal = getEl('custom-modal'), modalTitle = getEl('modal-title'),
               modalMessage = getEl('modal-message'), modalConfirmBtn = getEl('modal-confirm-btn'),
-              modalCancelBtn = getEl('modal-cancel-btn'), modalOkBtn = getEl('modal-ok-btn');
+              modalCancelBtn = getEl('modal-cancel-btn'), modalOkBtn = getEl('modal-ok-btn'),
+              sidebarToggleOpen = getEl('sidebar-toggle-open'),
+              sidebarToggleOpenChat = getEl('sidebar-toggle-open-chat'),
+              sidebarToggleClose = getEl('sidebar-toggle-close');
 
         // --- App State ---
         let peer, myUsername = '', myPeerId = '';
         let connections = {};
         let keyPairs = {};
-        let chatHistories = {}; // FIX: To store message history
+        let chatHistories = {};
         let unreadCounts = {};
         let currentChatPeerId = null;
         let typingTimeout = null;
@@ -207,13 +223,11 @@
                 const masterKeyPair = await generateRsaKeyPair();
                 localStorage.setItem('myPrivateKey', JSON.stringify(await window.crypto.subtle.exportKey("jwk", masterKeyPair.privateKey)));
                 localStorage.setItem('myPublicKey', JSON.stringify(await window.crypto.subtle.exportKey("jwk", masterKeyPair.publicKey)));
-                if (Notification.permission !== "granted") {
-                    await Notification.requestPermission();
-                }
+                if (Notification.permission !== "granted") await Notification.requestPermission();
                 peer = new Peer();
                 setupPeerListeners();
             } catch (error) {
-                showModal('Initialization Failed', `An error occurred: ${error.message}. Please try refreshing the page.`, 'alert');
+                showModal('Initialization Failed', `An error occurred: ${error.message}.`, 'alert');
                 joinBtn.disabled = false;
                 joinBtn.innerHTML = 'Generate Secure Identity';
             }
@@ -225,6 +239,7 @@
                 myPeerIdSpan.textContent = myPeerId;
                 usernameScreen.classList.add('hidden');
                 chatContainer.classList.remove('hidden');
+                chatContainer.classList.add('flex');
             });
             peer.on('connection', conn => handleNewConnection(conn));
             peer.on('error', err => {
@@ -251,7 +266,7 @@
                 if (data.type === 'handshake') {
                     if (!keyPairs[peerId]) {
                         keyPairs[peerId] = { publicKey: await importPublicKey(data.publicKey), username: data.username };
-                        chatHistories[peerId] = []; // Initialize history
+                        chatHistories[peerId] = [];
                         unreadCounts[peerId] = 0;
                         addContactToList(peerId, data.username);
                         showModal('Contact Added', `${data.username} has been added to your contacts.`, 'alert');
@@ -270,20 +285,17 @@
                     if (document.hidden) {
                         new Notification(`New Message from ${keyPairs[peerId].username}`, {
                             body: decryptedPayload.content,
-                            icon: 'https://img.icons8.com/plasticine/100/000000/secured-letter.png'
+                            icon: 'https://cdn-icons-png.flaticon.com/512/11743/11743755.png'
                         });
                     }
                 } else if (data.type === 'typing') {
                     showTypingIndicator(peerId);
                 }
-            } catch (error) {
-                console.error("Failed to handle received data:", error);
-                showModal("Decryption Error", "Failed to process an incoming message.");
-            }
+            } catch (error) { console.error("Failed to handle received data:", error); }
         }
         
         function connectToPeer(peerId) {
-            if (!peerId || peerId === myPeerId) { showModal("Invalid ID", "Please enter a valid Peer ID to connect.", "alert"); return; }
+            if (!peerId || peerId === myPeerId) { showModal("Invalid ID", "Please enter a valid Peer ID.", "alert"); return; }
             if(connections[peerId]) { showModal("Already Connected", "You are already connected to this peer.", "alert"); return; }
             const conn = peer.connect(peerId);
             handleNewConnection(conn);
@@ -292,37 +304,48 @@
         async function sendMessage() {
             const messageText = messageInput.value.trim();
             if (!messageText || !currentChatPeerId) return;
-
             const payload = { type: 'text', content: messageText, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
             
-            if (!keyPairs[currentChatPeerId] || !keyPairs[currentChatPeerId].publicKey) {
-                showModal("Cannot Send", "Secure connection not fully established. Please wait a moment.", "alert");
+            if (!keyPairs[currentChatPeerId]?.publicKey) {
+                showModal("Cannot Send", "Secure connection not fully established. Please wait.", "alert");
                 return;
             }
             try {
                 const encryptedPayload = await encryptData(keyPairs[currentChatPeerId].publicKey, payload);
                 connections[currentChatPeerId].send({ type: 'chat', payload: encryptedPayload });
-                
                 const messageData = { sender: 'You', payload, isSent: true };
                 chatHistories[currentChatPeerId].push(messageData);
                 addMessageToUI(messageData.sender, messageData.payload, messageData.isSent);
                 messageInput.value = '';
             } catch(error) {
-                showModal("Encryption Error", "Could not send message. The connection may have been lost.", "alert");
+                showModal("Encryption Error", "Could not send message. Connection may have been lost.", "alert");
                 console.error("Encryption failed:", error);
             }
         }
 
         // --- UI Functions ---
+        function toggleSidebar(show) {
+            if(show) {
+                leftPane.classList.remove('-translate-x-full');
+            } else {
+                leftPane.classList.add('-translate-x-full');
+            }
+        }
+
         function addContactToList(peerId, username) {
             if (getEl(`contact-${peerId}`)) return;
             const contactDiv = document.createElement('div');
             contactDiv.id = `contact-${peerId}`;
-            contactDiv.className = "flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors group";
+            contactDiv.className = "flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors group flex-shrink-0";
             contactDiv.innerHTML = `<i class="fas fa-user-circle text-2xl text-gray-400 mr-3"></i><span class="font-medium flex-grow">${username}</span><div id="unread-${peerId}" class="unread-badge mr-2 hidden">0</div><button class="delete-contact-btn text-gray-500 hover:text-red-500 text-sm opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-trash-alt"></i></button>`;
-            contactDiv.onclick = (e) => { if (!e.target.closest('.delete-contact-btn')) { selectChat(peerId, username); } };
+            contactDiv.onclick = (e) => { 
+                if (!e.target.closest('.delete-contact-btn')) { 
+                    selectChat(peerId, username); 
+                    if (window.innerWidth < 768) toggleSidebar(false);
+                } 
+            };
             contactDiv.querySelector('.delete-contact-btn').onclick = () => {
-                showModal('Delete Contact', `Are you sure you want to delete ${username}? This cannot be undone.`, 'confirm', () => {
+                showModal('Delete Contact', `Are you sure you want to delete ${username}?`, 'confirm', () => {
                     connections[peerId]?.close();
                     removeContact(peerId);
                 });
@@ -331,10 +354,8 @@
         }
 
         function removeContact(peerId) {
-            delete connections[peerId];
-            delete keyPairs[peerId];
-            delete chatHistories[peerId];
-            delete unreadCounts[peerId];
+            delete connections[peerId]; delete keyPairs[peerId];
+            delete chatHistories[peerId]; delete unreadCounts[peerId];
             getEl(`contact-${peerId}`)?.remove();
             if (currentChatPeerId === peerId) switchToIdleScreen();
         }
@@ -345,12 +366,9 @@
             Array.from(contactsList.children).forEach(child => child.classList.remove('bg-blue-600', 'hover:bg-blue-700'));
             getEl(`contact-${peerId}`).classList.add('bg-blue-600', 'hover:bg-blue-700');
             updateUnreadCount(peerId, 0);
-
-            messagesContainer.innerHTML = ''; // Clear display
-            // FIX: Repopulate with stored history
+            messagesContainer.innerHTML = '';
             const history = chatHistories[peerId] || [];
             history.forEach(msg => addMessageToUI(msg.sender, msg.payload, msg.isSent));
-            
             idleScreen.classList.add('hidden');
             activeChatScreen.classList.remove('hidden');
             activeChatScreen.classList.add('flex');
@@ -362,15 +380,15 @@
             idleScreen.classList.remove('hidden');
             activeChatScreen.classList.add('hidden');
             activeChatScreen.classList.remove('flex');
+            if(window.innerWidth < 768) {
+                 getEl('left-pane').classList.add('hidden');
+                 getEl('chat-area').classList.remove('hidden');
+            }
             Array.from(contactsList.children).forEach(child => child.classList.remove('bg-blue-600', 'hover:bg-blue-700'));
         }
         
         function updateUnreadCount(peerId, change) {
-            if (change === 0) {
-                unreadCounts[peerId] = 0;
-            } else {
-                unreadCounts[peerId] = (unreadCounts[peerId] || 0) + change;
-            }
+            unreadCounts[peerId] = change === 0 ? 0 : (unreadCounts[peerId] || 0) + change;
             const badge = getEl(`unread-${peerId}`);
             if (badge) {
                 badge.textContent = unreadCounts[peerId];
@@ -403,25 +421,35 @@
         }
         
         // --- Event Listeners ---
-        joinBtn.addEventListener('click', () => { const username = usernameInput.value.trim(); if (username) initializeUser(username); else showModal('Username Required', 'Please enter a username to continue.', 'alert'); });
+        joinBtn.addEventListener('click', () => { const username = usernameInput.value.trim(); if (username) initializeUser(username); else showModal('Username Required', 'Please enter a username.', 'alert'); });
         usernameInput.addEventListener('keypress', e => { if(e.key === 'Enter') joinBtn.click(); });
-        copyIdBtn.addEventListener('click', () => { navigator.clipboard.writeText(myPeerId).then(() => showModal('Copied!', 'Your Connection ID has been copied to the clipboard.', 'alert')); });
+        copyIdBtn.addEventListener('click', () => { navigator.clipboard.writeText(myPeerId).then(() => {
+            const originalIcon = copyIdBtn.innerHTML;
+            copyIdBtn.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+            setTimeout(() => { copyIdBtn.innerHTML = originalIcon; }, 1500);
+        }); });
         connectBtn.addEventListener('click', () => { const peerId = peerIdInput.value.trim(); connectToPeer(peerId); peerIdInput.value = ''; });
+        peerIdInput.addEventListener('keypress', e => { if (e.key === 'Enter') connectBtn.click(); });
         sendBtn.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
         messageInput.addEventListener('keyup', () => { if (currentChatPeerId && connections[currentChatPeerId]) connections[currentChatPeerId].send({ type: 'typing' }); });
         leaveBtn.addEventListener('click', () => {
-            showModal('Leave & Forget', 'Are you sure? This will delete your keys, clear all conversations, and disconnect you. This action cannot be undone.', 'confirm', () => {
-                peer.destroy();
+            showModal('Leave & Forget', 'This will delete your keys and end your session.', 'confirm', () => {
+                peer?.destroy();
                 localStorage.clear();
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
                 location.reload();
             });
         });
 
+        // Sidebar Toggles
+        sidebarToggleOpen.addEventListener('click', () => toggleSidebar(true));
+        sidebarToggleOpenChat.addEventListener('click', () => toggleSidebar(true));
+        sidebarToggleClose.addEventListener('click', () => toggleSidebar(false));
+
         const beforeUnloadHandler = (e) => {
             e.preventDefault();
-            e.returnValue = ''; // Required for Chrome and other browsers
+            e.returnValue = '';
         };
         window.addEventListener('beforeunload', beforeUnloadHandler);
     });
